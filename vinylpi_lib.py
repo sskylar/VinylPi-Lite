@@ -11,14 +11,18 @@ import json
 import collections
 import shutil
 import logging
+import audioop
+import numpy as np
 
 CHUNK = 4096
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 44100
 
-RECORD_SECONDS = 3
-CHECK_INTERVAL = 3
+MINIMUM_RMS = 100
+
+RECORD_SECONDS = 15
+CHECK_INTERVAL = 5
 AGGRESSIVE_CHECK_INTERVAL = 2
 AGGRESSIVE_CHECK_COUNT = 3
 USER_INFO_FILE = "lastfm_user_info.json"
@@ -75,6 +79,11 @@ def get_usb_audio_device():
     p.terminate()
     return usb_device
 
+def get_device_channels(i):
+    p = pyaudio.PyAudio()
+    device_info = p.get_device_info_by_index(i)
+    return device_info["maxInputChannels"]
+
 def get_lastfm_network():
     user_info = load_user_info()
     return pylast.LastFMNetwork(
@@ -111,7 +120,8 @@ async def recognize_song(audio_data, verbose, logger):
         wav_data = wav_file.getvalue()
     
     try:
-        result = await shazam.recognize(wav_data)
+        result = await shazam.recognize_song(wav_data)
+        logger.info(result)
         if result and 'track' in result:
             confidence = result.get('confidence', 0)
             if verbose:
@@ -125,6 +135,16 @@ async def recognize_song(audio_data, verbose, logger):
 def clear_console():
     os.system('cls' if os.name == 'nt' else 'clear')
 
+def ascii_meter(rms, max_rms=7071, bar_width=20):
+    # Clamp RMS to avoid overflow
+    rms = max(0.0, min(rms, max_rms))
+    
+    # Scale RMS to bar count (1 to bar_width)
+    level = int((rms / max_rms) * (bar_width - 1)) + 1
+    
+    # Print the bar
+    print('\r● Recording... ' + '■' * level + '□' * (bar_width - level), f"{rms:>4} RMS", end='')
+
 async def check_song_consistency(recognize_song_func, audio_stream, verbose, logger):
     song_checks = []
 
@@ -133,16 +153,38 @@ async def check_song_consistency(recognize_song_func, audio_stream, verbose, log
             logger.debug(f"Consistency check {i+1}/{CONSISTENCY_CHECKS}")
         
         frames = []
+        rms = []
         for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
             data = audio_stream.read(CHUNK, exception_on_overflow=False)
+            rms_val = audioop.rms(data, 2)
+            rms.append(rms_val)
+            if verbose:
+                ascii_meter(rms_val)
             frames.append(data)
+        print('')
 
         audio_data = b''.join(frames)
-        artist, title, confidence = await recognize_song_func(audio_data)
-        if artist and title and confidence >= CONFIDENCE_THRESHOLD:
-            song_checks.append((artist, title))
 
-        await asyncio.sleep(RECORD_SECONDS)
+        # convert stereo to mono
+        p = pyaudio.PyAudio()
+        device_info = p.get_default_input_device_info()
+        if device_info['maxInputChannels'] > 1:
+            audio_stereo = np.frombuffer(audio_data, dtype=np.int16).reshape(-1, 2)
+            audio_data = audio_stereo.mean(axis=1).astype(np.int16)
+        
+        # check data for silence
+        avg_rms = sum(rms) / len(rms)
+        logger.debug(f"Average RMS: {avg_rms}")
+
+        if avg_rms > MINIMUM_RMS:
+            artist, title, confidence = await recognize_song_func(audio_data)
+            if artist and title and confidence >= CONFIDENCE_THRESHOLD:
+                song_checks.append((artist, title))
+        else:
+            if verbose:
+                logger.info("Too quiet, skipping detection")
+
+        await asyncio.sleep(CHECK_INTERVAL)
 
     song_counts = collections.Counter(song_checks)
     most_common = song_counts.most_common(1)
@@ -200,3 +242,4 @@ def display_tui_track_info(artist, title):
         centered_output.append(" " * left_pad + line)
 
     return "\n".join(centered_output)
+

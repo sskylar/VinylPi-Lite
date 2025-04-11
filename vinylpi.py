@@ -9,7 +9,7 @@ from typing import Tuple, Optional
 
 from vinylpi_lib import (
     CHUNK, FORMAT, CHANNELS, RATE, CHECK_INTERVAL,
-    get_usb_audio_device, get_lastfm_network, clear_console,
+    get_usb_audio_device, get_device_channels, get_lastfm_network, clear_console,
     aggressive_song_check, check_song_consistency, recognize_song,
     log_song_to_lastfm, list_audio_devices
 )
@@ -81,7 +81,7 @@ async def main() -> None:
     p = pyaudio.PyAudio()
     stream = p.open(
         format=FORMAT,
-        channels=CHANNELS,
+        channels=get_device_channels(selected_device),
         rate=RATE,
         input=True,
         input_device_index=selected_device,
