@@ -10,7 +10,7 @@ from typing import Tuple, Optional
 from vinylpi_lib import (
     CHUNK, FORMAT, CHANNELS, RATE, CHECK_INTERVAL,
     get_usb_audio_device, get_device_channels, get_lastfm_network, clear_console,
-    aggressive_song_check, check_song_consistency, recognize_song,
+    check_song_consistency, recognize_song,
     log_song_to_lastfm, list_audio_devices
 )
 
@@ -91,7 +91,6 @@ async def main() -> None:
     current_song = None
     last_logged_song = None
     consecutive_same_song_count = 0
-    no_song_detected_count = 0
 
     async def recognize_func(audio_data):
         return await recognize_song(audio_data, args.verbose, logger)
@@ -119,34 +118,12 @@ async def main() -> None:
                             last_logged_song, logger
                         )
                         current_song = song
-                        no_song_detected_count = 0
                     else:
                         consecutive_same_song_count += 1
                         logger.debug(f"Still playing: {title} by {artist}")
                 else:
                     consecutive_same_song_count = 0
-                    no_song_detected_count += 1
-                    if no_song_detected_count >= 3:
-                        logger.info("No song detected. Trying aggressive detection...")
-                        song = await aggressive_song_check(recognize_func, stream, args.verbose, logger)
-                        if song and song[0] and song[1] and song[0] != "None" and song[1] != "None":
-                            artist, title = song
-                            if args.tui:
-                                display_tui(song)
-                            else:
-                                logger.info(f"Detected after aggressive check: {title} by {artist}")
-                            last_logged_song = log_song_to_lastfm(
-                                lastfm_network, artist, title,
-                                last_logged_song, logger
-                            )
-                            current_song = song
-                            no_song_detected_count = 0
-                        else:
-                            if args.tui:
-                                display_tui()
-                            else:
-                                logger.info("No valid song detected")
-                            current_song = None
+                    logger.info("No valid song detected")
                 
                 await asyncio.sleep(CHECK_INTERVAL)
 

@@ -23,8 +23,6 @@ MINIMUM_RMS = 100
 
 RECORD_SECONDS = 15
 CHECK_INTERVAL = 5
-AGGRESSIVE_CHECK_INTERVAL = 2
-AGGRESSIVE_CHECK_COUNT = 3
 USER_INFO_FILE = "lastfm_user_info.json"
 CONSISTENCY_CHECKS = 3
 CONSISTENCY_THRESHOLD = 2
@@ -199,26 +197,6 @@ async def check_song_consistency(recognize_song_func, audio_stream, verbose, log
     
     if verbose:
         logger.debug("No consistent song detected")
-    return None, None
-
-async def aggressive_song_check(recognize_song_func, audio_stream, verbose, logger):
-    for i in range(AGGRESSIVE_CHECK_COUNT):
-        if verbose:
-            logger.debug(f"Aggressive check {i+1}/{AGGRESSIVE_CHECK_COUNT}")
-        
-        frames = []
-        for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-            data = audio_stream.read(CHUNK, exception_on_overflow=False)
-            frames.append(data)
-
-        audio_data = b''.join(frames)
-        song = await check_song_consistency(recognize_song_func, audio_stream, verbose, logger)
-
-        if song and song[0] and song[1] and song[0] != "None" and song[1] != "None":
-            return song
-
-        await asyncio.sleep(AGGRESSIVE_CHECK_INTERVAL)
-    
     return None, None
 
 def display_tui_track_info(artist, title):
