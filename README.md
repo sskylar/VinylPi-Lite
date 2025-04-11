@@ -76,7 +76,6 @@ Run the script once to configure it, It should run you though applying the API c
 -v or --verbose - This is useful for debugging, In case no songs are being detected.
 -l or --list-devices - List current audio input devices
 -d or --device - Use the number given to the device from the list command here, If this is not specified, It will use the first USB audio device it finds for input. 
--t or --tui - If you do not plan on using this headless, This will provide a nice terminal UI displaying the currently playing song
 
 ### Post install
 
@@ -124,7 +123,6 @@ sudo systemctl start vinylpi.service
 python VinylPi.py -v - Verbose output
 python VinylPi.py -l - List avalible devices for use
 python VinylPi.py -d 1 - Using the number assigned to the device from the list command, this will set the script to use that device
-python VinylPi.py -t - Use the TUI interface to see what tracks are being played
 ```
 
 ### Current bugs 

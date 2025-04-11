@@ -24,14 +24,11 @@ Examples:
   python vinylpi.py -v                # Run in verbose mode
   python vinylpi.py -d 2              # Use audio device with index 2
   python vinylpi.py -l                # List available audio devices
-  python vinylpi.py -t                # Display a TUI-like output for track info
-  python vinylpi.py -v -t             # Combine verbose + TUI
         """
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("-d", "--device", type=int, default=None, help="Select audio device index")
     parser.add_argument("-l", "--list-devices", action="store_true", help="List available audio devices and exit")
-    parser.add_argument("-t", "--tui", action="store_true", help="Show track information in a TUI-like interface")
     return parser
 
 args = create_parser().parse_args()
@@ -40,29 +37,6 @@ args = create_parser().parse_args()
 logging.basicConfig(level=logging.DEBUG if args.verbose else logging.ERROR,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-def display_tui(current_song: Optional[Tuple[str, str]] = None, is_listening: bool = True) -> None:
-    clear_console()
-    terminal_width, _ = shutil.get_terminal_size()
-    
-    print("+" + "-" * (terminal_width - 2) + "+")
-    print("|" + " VinylPi ".center(terminal_width - 2) + "|")
-    print("+" + "-" * (terminal_width - 2) + "+")
-    
-    if current_song:
-        artist, title = current_song
-        print(f"| Now Playing:".ljust(terminal_width - 1) + "|")
-        print(f"|   Title: {title}".ljust(terminal_width - 1) + "|")
-        print(f"|   Artist: {artist}".ljust(terminal_width - 1) + "|")
-    else:
-        print("|".ljust(terminal_width - 1) + "|")
-        print("| No track currently playing".ljust(terminal_width - 1) + "|")
-        print("|".ljust(terminal_width - 1) + "|")
-    
-    print("+" + "-" * (terminal_width - 2) + "+")
-    if is_listening:
-        print("| Listening for new tracks...".ljust(terminal_width - 1) + "|")
-    print("+" + "-" * (terminal_width - 2) + "+")
 
 async def main() -> None:
     if args.list_devices:
@@ -98,10 +72,7 @@ async def main() -> None:
     try:
         while True:
             try:
-                if args.tui:
-                    display_tui(current_song)
-                else:
-                    logger.info("Starting song detection...")
+                logger.info("Starting song detection...")
 
                 song = await check_song_consistency(recognize_func, stream, args.verbose, logger)
 
@@ -109,10 +80,7 @@ async def main() -> None:
                     artist, title = song
                     if song != current_song:
                         consecutive_same_song_count = 1
-                        if args.tui:
-                            display_tui(song)
-                        else:
-                            logger.info(f"Now playing: {title} by {artist}")
+                        logger.info(f"Now playing: {title} by {artist}")
                         last_logged_song = log_song_to_lastfm(
                             lastfm_network, artist, title,
                             last_logged_song, logger

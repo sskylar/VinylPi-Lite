@@ -198,26 +198,3 @@ async def check_song_consistency(recognize_song_func, audio_stream, verbose, log
     if verbose:
         logger.debug("No consistent song detected")
     return None, None
-
-def display_tui_track_info(artist, title):
-    columns, _ = shutil.get_terminal_size()
-    box_width = max(len(artist), len(title)) + 14
-    if box_width > columns:
-        box_width = min(box_width, columns - 2)
-
-    top_bottom = "+" + "-" * (box_width - 2) + "+"
-    title_cut = max(box_width - 14, 1)
-    artist_cut = max(box_width - 13, 1)
-
-    title_line = f"| Now Playing: {title:<{title_cut}} |"
-    artist_line = f"| Artist:      {artist:<{artist_cut}} |"
-
-    box_lines = [top_bottom, title_line, artist_line, top_bottom]
-
-    left_pad = max(0, (columns - box_width) // 2)
-    centered_output = []
-    for line in box_lines:
-        centered_output.append(" " * left_pad + line)
-
-    return "\n".join(centered_output)
-
