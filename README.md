@@ -50,7 +50,7 @@ Currently this script is designed to run on a Raspberry Pi (Tested on a Pi 3 and
 
 ```
 sudo apt-get update
-sudo apt-get install python3 python3-pip portaudio19-dev ffmpeg libasound2-dev git
+sudo apt-get install python3 python3-pip portaudio19-dev ffmpeg libasound2-dev git libopenblas-dev
 
 ```
 
