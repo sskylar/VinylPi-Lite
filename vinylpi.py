@@ -10,7 +10,7 @@ from typing import Tuple, Optional
 from vinylpi_lib import (
     CHUNK, FORMAT, CHANNELS, RATE, CHECK_INTERVAL,
     get_usb_audio_device, get_device_channels, get_lastfm_network, clear_console,
-    check_song_consistency, recognize_song,
+    check_song, recognize_song,
     log_song_to_lastfm, list_audio_devices
 )
 
@@ -50,7 +50,7 @@ async def main() -> None:
 
     logger.info(f"Using audio device index: {selected_device}")
 
-    lastfm_network = get_lastfm_network()
+    lastfm_network = get_lastfm_network(logger)
 
     p = pyaudio.PyAudio()
     stream = p.open(
@@ -62,35 +62,28 @@ async def main() -> None:
         frames_per_buffer=CHUNK
     )
 
-    current_song = None
+    recent_songs = []
     last_logged_song = None
-    consecutive_same_song_count = 0
-
-    async def recognize_func(audio_data):
-        return await recognize_song(audio_data, args.verbose, logger)
 
     try:
         while True:
             try:
                 logger.info("Starting song detection...")
 
-                song = await check_song_consistency(recognize_func, stream, args.verbose, logger)
+                song = artist, title = await check_song(stream, args.verbose, logger)
 
-                if song and song[0] and song[1] and song[0] != "None" and song[1] != "None":
-                    artist, title = song
-                    if song != current_song:
-                        consecutive_same_song_count = 1
-                        logger.info(f"Now playing: {title} by {artist}")
-                        last_logged_song = log_song_to_lastfm(
-                            lastfm_network, artist, title,
-                            last_logged_song, logger
-                        )
-                        current_song = song
+                if artist and title:
+                    recent_songs = recent_songs[-2:] + [song]
+                    if recent_songs.count(song) >= 2:
+                        logger.info(f"Second match: {title} by {artist}")
+                        if song == last_logged_song:
+                            logger.info(f"Duplicate song detected. Not logging: {title} by {artist}")
+                        else:
+                            last_logged_song = log_song_to_lastfm(lastfm_network, artist, title, logger)
+                        recent_songs = []
                     else:
-                        consecutive_same_song_count += 1
-                        logger.debug(f"Still playing: {title} by {artist}")
+                        logger.info(f"First match: {title} by {artist}")
                 else:
-                    consecutive_same_song_count = 0
                     logger.info("No valid song detected")
                 
                 await asyncio.sleep(CHECK_INTERVAL)

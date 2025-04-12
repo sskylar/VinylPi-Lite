@@ -82,30 +82,25 @@ def get_device_channels(i):
     device_info = p.get_device_info_by_index(i)
     return device_info["maxInputChannels"]
 
-def get_lastfm_network():
-    user_info = load_user_info()
-    return pylast.LastFMNetwork(
-        api_key=user_info["api_key"],
-        api_secret=user_info["api_secret"],
-        username=user_info["username"],
-        password_hash=user_info["password_hash"]
-    )
+def get_lastfm_network(logger):
+    try:
+        user_info = load_user_info()
+        return pylast.LastFMNetwork(
+            api_key=user_info["api_key"],
+            api_secret=user_info["api_secret"],
+            username=user_info["username"],
+            password_hash=user_info["password_hash"]
+        )
+    except Exception as e:
+        logger.error(f"Error logging into Last.fm: {e}")
 
-def log_song_to_lastfm(network, artist, title, last_logged_song, logger):
-    if artist and title and artist != "None" and title != "None":
-        if (artist, title) == last_logged_song:
-            logger.info(f"Duplicate song detected. Not logging: {title} by {artist}")
-            return last_logged_song
-        
-        try:
-            network.scrobble(artist=artist, title=title, timestamp=int(time.time()))
-            logger.info(f"Logged to Last.fm: {title} by {artist}")
-            return (artist, title)
-        except Exception as e:
-            logger.error(f"Error logging to Last.fm: {e}")
-    else:
-        logger.info("Song not logged: Invalid artist or title")
-    return last_logged_song
+def log_song_to_lastfm(network, artist, title, logger):
+    try:
+        network.scrobble(artist=artist, title=title, timestamp=int(time.time()))
+        logger.info(f"Logged to Last.fm: {title} by {artist}")
+        return (artist, title)
+    except Exception as e:
+        logger.error(f"Error logging to Last.fm: {e}")
 
 async def recognize_song(audio_data, verbose, logger):
     shazam = Shazam()
@@ -119,16 +114,12 @@ async def recognize_song(audio_data, verbose, logger):
     
     try:
         result = await shazam.recognize_song(wav_data)
-        logger.info(result)
         if result and 'track' in result:
-            confidence = result.get('confidence', 0)
-            if verbose:
-                logger.debug(f"Detected: {result['track']['subtitle']} - {result['track']['title']} (Confidence: {confidence})")
-            return result['track']['subtitle'], result['track']['title'], confidence
+            return result['track']['subtitle'], result['track']['title']
     except Exception as e:
         if verbose:
             logger.error(f"Error in song recognition: {e}")
-    return None, None, 0
+    return None, None
 
 def clear_console():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -143,58 +134,34 @@ def ascii_meter(rms, max_rms=7071, bar_width=20):
     # Print the bar
     print('\r● Recording... ' + '■' * level + '□' * (bar_width - level), f"{rms:>4} RMS", end='')
 
-async def check_song_consistency(recognize_song_func, audio_stream, verbose, logger):
-    song_checks = []
-
-    for i in range(CONSISTENCY_CHECKS):
+async def check_song(audio_stream, verbose, logger):
+    frames = []
+    rms = []
+    for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+        data = audio_stream.read(CHUNK, exception_on_overflow=False)
+        rms_val = audioop.rms(data, 2)
+        rms.append(rms_val)
         if verbose:
-            logger.debug(f"Consistency check {i+1}/{CONSISTENCY_CHECKS}")
-        
-        frames = []
-        rms = []
-        for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-            data = audio_stream.read(CHUNK, exception_on_overflow=False)
-            rms_val = audioop.rms(data, 2)
-            rms.append(rms_val)
-            if verbose:
-                ascii_meter(rms_val)
-            frames.append(data)
-        print('')
+            ascii_meter(rms_val)
+        frames.append(data)
+    print('')
 
-        audio_data = b''.join(frames)
+    audio_data = b''.join(frames)
 
-        # convert stereo to mono
-        p = pyaudio.PyAudio()
-        device_info = p.get_default_input_device_info()
-        if device_info['maxInputChannels'] > 1:
-            audio_stereo = np.frombuffer(audio_data, dtype=np.int16).reshape(-1, 2)
-            audio_data = audio_stereo.mean(axis=1).astype(np.int16)
-        
-        # check data for silence
-        avg_rms = sum(rms) / len(rms)
-        logger.debug(f"Average RMS: {avg_rms}")
-
-        if avg_rms > MINIMUM_RMS:
-            artist, title, confidence = await recognize_song_func(audio_data)
-            if artist and title and confidence >= CONFIDENCE_THRESHOLD:
-                song_checks.append((artist, title))
-        else:
-            if verbose:
-                logger.info("Too quiet, skipping detection")
-
-        await asyncio.sleep(CHECK_INTERVAL)
-
-    song_counts = collections.Counter(song_checks)
-    most_common = song_counts.most_common(1)
-
-    if most_common and most_common[0][1] >= CONSISTENCY_THRESHOLD:
-        if verbose:
-            logger.debug(
-                f"Consistent song detected: {most_common[0][0][1]} by {most_common[0][0][0]} "
-                f"({most_common[0][1]}/{CONSISTENCY_CHECKS} matches)"
-            )
-        return most_common[0][0]
+    # convert stereo to mono
+    p = pyaudio.PyAudio()
+    device_info = p.get_default_input_device_info()
+    if device_info['maxInputChannels'] > 1:
+        audio_stereo = np.frombuffer(audio_data, dtype=np.int16).reshape(-1, 2)
+        audio_data = audio_stereo.mean(axis=1).astype(np.int16)
     
-    if verbose:
-        logger.debug("No consistent song detected")
-    return None, None
+    # check data for silence
+    avg_rms = sum(rms) / len(rms)
+    logger.debug(f"Average RMS: {avg_rms}")
+
+    if avg_rms > MINIMUM_RMS:
+        return await recognize_song(audio_data, verbose, logger)
+    else:
+        if verbose:
+            logger.info("Too quiet, skipping detection")
+        return None, None
