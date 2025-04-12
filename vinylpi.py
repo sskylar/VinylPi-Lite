@@ -10,7 +10,7 @@ from typing import Tuple, Optional
 from vinylpi_lib import (
     CHUNK, FORMAT, CHANNELS, RATE, CHECK_INTERVAL,
     get_usb_audio_device, get_device_channels, get_lastfm_network, clear_console,
-    check_song, recognize_song,
+    check_song, recognize_song, ascii_meter,
     log_song_to_lastfm, list_audio_devices
 )
 
@@ -24,11 +24,13 @@ Examples:
   python vinylpi.py -v                # Run in verbose mode
   python vinylpi.py -d 2              # Use audio device with index 2
   python vinylpi.py -l                # List available audio devices
+  python vinylpi.py -m                # Show sound meter
         """
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("-d", "--device", type=int, default=None, help="Select audio device index")
     parser.add_argument("-l", "--list-devices", action="store_true", help="List available audio devices and exit")
+    parser.add_argument("-m", "--meter", action="store_true", help="Show sound meter")
     return parser
 
 args = create_parser().parse_args()
@@ -50,8 +52,6 @@ async def main() -> None:
 
     logger.info(f"Using audio device index: {selected_device}")
 
-    lastfm_network = get_lastfm_network(logger)
-
     p = pyaudio.PyAudio()
     stream = p.open(
         format=FORMAT,
@@ -61,6 +61,12 @@ async def main() -> None:
         input_device_index=selected_device,
         frames_per_buffer=CHUNK
     )
+
+    if args.meter:
+        ascii_meter(stream)
+        return
+    
+    lastfm_network = get_lastfm_network(logger)
 
     recent_songs = []
     last_logged_song = None
@@ -94,9 +100,7 @@ async def main() -> None:
                 logger.error(f"An error occurred: {e}", exc_info=True)
 
     finally:
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
+        stream.stop_stream(), stream.close(), p.terminate()
 
 if __name__ == "__main__":
     asyncio.run(main())

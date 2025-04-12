@@ -121,15 +121,14 @@ async def recognize_song(audio_data, verbose, logger):
 def clear_console():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def ascii_meter(rms, max_rms=7071, bar_width=20):
-    # Clamp RMS to avoid overflow
-    rms = max(0.0, min(rms, max_rms))
-    
-    # Scale RMS to bar count (1 to bar_width)
-    level = int((rms / max_rms) * (bar_width - 1)) + 1
-    
-    # Print the bar
-    print('\r● Recording... ' + '■' * level + '□' * (bar_width - level), f"{rms:>4} RMS", end='')
+def ascii_meter(audio_stream, max_rms=7071, bar_width=20):
+    for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+        data = audio_stream.read(CHUNK, exception_on_overflow=False)
+        rms = audioop.rms(data, 2)
+        rms = max(0.0, min(rms, max_rms))
+        level = int((rms / max_rms) * (bar_width - 1)) + 1
+        print('\r● Recording... ' + '■' * level + '□' * (bar_width - level), f"{rms:>4} RMS", end='')
+    print('')
 
 async def check_song(audio_stream, verbose, logger):
     frames = []
@@ -138,10 +137,7 @@ async def check_song(audio_stream, verbose, logger):
         data = audio_stream.read(CHUNK, exception_on_overflow=False)
         rms_val = audioop.rms(data, 2)
         rms.append(rms_val)
-        if verbose:
-            ascii_meter(rms_val)
         frames.append(data)
-    print('')
 
     audio_data = b''.join(frames)
 
