@@ -24,9 +24,6 @@ MINIMUM_RMS = 100
 RECORD_SECONDS = 15
 CHECK_INTERVAL = 5
 USER_INFO_FILE = "lastfm_user_info.json"
-CONSISTENCY_CHECKS = 3
-CONSISTENCY_THRESHOLD = 2
-CONFIDENCE_THRESHOLD = 0
 
 def store_user_info():
     if not os.path.exists(USER_INFO_FILE):
