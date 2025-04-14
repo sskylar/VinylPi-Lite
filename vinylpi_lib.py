@@ -118,19 +118,9 @@ async def recognize_song(audio_data, verbose, logger):
             logger.error(f"Error in song recognition: {e}")
     return None, None
 
-def clear_console():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-def ascii_meter(audio_stream, max_rms=7071, bar_width=20):
-    for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-        data = audio_stream.read(CHUNK, exception_on_overflow=False)
-        rms = audioop.rms(data, 2)
-        rms = max(0.0, min(rms, max_rms))
-        level = int((rms / max_rms) * (bar_width - 1)) + 1
-        print('\r● Recording... ' + '■' * level + '□' * (bar_width - level), f"{rms:>4} RMS", end='')
-    print('')
-
 async def check_song(audio_stream, verbose, logger):
+    audio_stream.stop_stream(), audio_stream.start_stream()
+
     frames = []
     rms = []
     for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):

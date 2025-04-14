@@ -5,12 +5,14 @@ import asyncio
 import pyaudio
 import shutil
 import logging
+import audioop
+import numpy as np
 from typing import Tuple, Optional
 
 from vinylpi_lib import (
     CHUNK, FORMAT, CHANNELS, RATE, CHECK_INTERVAL,
-    get_usb_audio_device, get_device_channels, get_lastfm_network, clear_console,
-    check_song, recognize_song, ascii_meter,
+    get_usb_audio_device, get_device_channels, get_lastfm_network,
+    check_song, recognize_song,
     log_song_to_lastfm, list_audio_devices
 )
 
@@ -24,13 +26,13 @@ Examples:
   python vinylpi.py -v                # Run in verbose mode
   python vinylpi.py -d 2              # Use audio device with index 2
   python vinylpi.py -l                # List available audio devices
-  python vinylpi.py -m                # Show sound meter
+  python vinylpi.py -m                # Display sound meter
         """
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("-d", "--device", type=int, default=None, help="Select audio device index")
     parser.add_argument("-l", "--list-devices", action="store_true", help="List available audio devices and exit")
-    parser.add_argument("-m", "--meter", action="store_true", help="Show sound meter")
+    parser.add_argument("-m", "--meter", action="store_true", help="Show sound meter for selected device")
     return parser
 
 args = create_parser().parse_args()
@@ -39,6 +41,15 @@ args = create_parser().parse_args()
 logging.basicConfig(level=logging.DEBUG if args.verbose else logging.ERROR,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+def display_sound_meter(audio_stream, max_rms=7071, bar_width=20):
+    while True:
+        data = audio_stream.read(CHUNK, exception_on_overflow=False)
+        rms = audioop.rms(data, 2)
+        rms = max(0.0, min(rms, max_rms))
+        level = int((rms / max_rms) * (bar_width - 1)) + 1
+        print('\r' + '■' * level + '□' * (bar_width - level), f"{rms:>4} RMS", end='')
+    print('')
 
 async def main() -> None:
     if args.list_devices:
@@ -63,7 +74,7 @@ async def main() -> None:
     )
 
     if args.meter:
-        ascii_meter(stream)
+        display_sound_meter(stream)
         return
     
     lastfm_network = get_lastfm_network(logger)
