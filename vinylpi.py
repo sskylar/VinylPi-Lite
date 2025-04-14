@@ -19,7 +19,7 @@ RATE = 44100
 MINIMUM_RMS = 100
 
 RECORD_SECONDS = 15
-CHECK_INTERVAL = 5
+CHECK_INTERVAL = 1
 USER_INFO_FILE = "lastfm_user_info.json"
 
 def create_parser() -> argparse.ArgumentParser:
@@ -65,19 +65,7 @@ def list_audio_devices():
             print(f"Device Index {i}: {device_name}")
     p.terminate()
 
-def get_lastfm_network(logger):
-    try:
-        user_info = load_user_info()
-        return pylast.LastFMNetwork(
-            api_key=user_info["api_key"],
-            api_secret=user_info["api_secret"],
-            username=user_info["username"],
-            password_hash=user_info["password_hash"]
-        )
-    except Exception as e:
-        logger.error(f"Error logging into Last.fm: {e}")
-
-def log_song_to_lastfm(network, artist, title, logger):
+def log_song_to_lastfm(network, artist, title):
     try:
         network.scrobble(artist=artist, title=title, timestamp=int(time.time()))
         logger.info(f"Logged to Last.fm: {title} by {artist}")
@@ -85,7 +73,7 @@ def log_song_to_lastfm(network, artist, title, logger):
     except Exception as e:
         logger.error(f"Error logging to Last.fm: {e}")
 
-async def recognize_song(audio_data, verbose, logger):
+async def recognize_song(audio_data):
     shazam = Shazam()
     with io.BytesIO() as wav_file:
         with wave.open(wav_file, 'wb') as wav:
@@ -100,11 +88,11 @@ async def recognize_song(audio_data, verbose, logger):
         if result and 'track' in result:
             return result['track']['subtitle'], result['track']['title']
     except Exception as e:
-        if verbose:
+        if args.verbose:
             logger.error(f"Error in song recognition: {e}")
     return None, None
 
-async def check_song(audio_stream, verbose, logger):
+async def check_song(audio_stream):
     audio_stream.stop_stream(), audio_stream.start_stream()
 
     frames = []
@@ -122,9 +110,9 @@ async def check_song(audio_stream, verbose, logger):
     logger.debug(f"Average RMS: {avg_rms}")
 
     if avg_rms > MINIMUM_RMS:
-        return await recognize_song(audio_data, verbose, logger)
+        return await recognize_song(audio_data)
     else:
-        if verbose:
+        if args.verbose:
             logger.info("Too quiet, skipping detection")
         return None, None
 
@@ -139,14 +127,9 @@ def display_sound_meter(audio_stream, max_rms=7071, bar_width=20):
 
 async def main() -> None:
     if args.list_devices:
-        list_audio_devices()
-        return
+        return list_audio_devices()
 
-    selected_device = args.device if args.device is not None else 0
-    if selected_device is None:
-        logger.error("No USB audio device found. Exiting.")
-        return
-
+    selected_device = args.device or 0
     logger.info(f"Using audio device index: {selected_device}")
 
     p = pyaudio.PyAudio()
@@ -160,10 +143,9 @@ async def main() -> None:
     )
 
     if args.meter:
-        display_sound_meter(stream)
-        return
+        return display_sound_meter(stream)
     
-    lastfm_network = get_lastfm_network(logger)
+    lastfm_network = pylast.LastFMNetwork(**load_user_info())
 
     recent_songs = []
     last_logged_song = None
@@ -173,7 +155,7 @@ async def main() -> None:
             try:
                 logger.info("Starting song detection...")
 
-                song = artist, title = await check_song(stream, args.verbose, logger)
+                song = artist, title = await check_song(stream)
 
                 if artist and title:
                     recent_songs = recent_songs[-2:] + [song]
@@ -182,7 +164,7 @@ async def main() -> None:
                         if song == last_logged_song:
                             logger.info(f"Duplicate song detected. Not logging: {title} by {artist}")
                         else:
-                            last_logged_song = log_song_to_lastfm(lastfm_network, artist, title, logger)
+                            last_logged_song = log_song_to_lastfm(lastfm_network, artist, title)
                         recent_songs = []
                     else:
                         logger.info(f"First match: {title} by {artist}")
