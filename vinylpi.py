@@ -4,7 +4,6 @@ import audioop
 import io
 import json
 import logging
-import numpy as np
 import os
 import pyaudio
 import pylast
@@ -49,33 +48,12 @@ logging.basicConfig(level=logging.DEBUG if args.verbose else logging.ERROR,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def store_user_info():
-    if not os.path.exists(USER_INFO_FILE):
-        api_key = input("Enter your Last.fm API key: ")
-        api_secret = input("Enter your Last.fm API secret: ")
-        username = input("Enter your Last.fm username: ")
-        password = input("Enter your Last.fm password: ")
-        password_hash = pylast.md5(password)
-
-        user_info = {
-            "api_key": api_key,
-            "api_secret": api_secret,
-            "username": username,
-            "password_hash": password_hash
-        }
-
-        with open(USER_INFO_FILE, "w") as f:
-            json.dump(user_info, f)
-        return user_info
-    else:
-        return load_user_info()
-
 def load_user_info():
     if os.path.exists(USER_INFO_FILE):
         with open(USER_INFO_FILE, "r") as f:
             return json.load(f)
     else:
-        return store_user_info()
+        logger.error(f"No Last.fm credentials found")
 
 def list_audio_devices():
     p = pyaudio.PyAudio()
@@ -86,22 +64,6 @@ def list_audio_devices():
             device_name = device_info["name"]
             print(f"Device Index {i}: {device_name}")
     p.terminate()
-
-def get_usb_audio_device():
-    p = pyaudio.PyAudio()
-    usb_device = None
-    for i in range(p.get_device_count()):
-        device_info = p.get_device_info_by_index(i)
-        if "usb" in device_info["name"].lower() and device_info["maxInputChannels"] > 0:
-            usb_device = i
-            break
-    p.terminate()
-    return usb_device
-
-def get_device_channels(i):
-    p = pyaudio.PyAudio()
-    device_info = p.get_device_info_by_index(i)
-    return device_info["maxInputChannels"]
 
 def get_lastfm_network(logger):
     try:
@@ -154,13 +116,6 @@ async def check_song(audio_stream, verbose, logger):
         frames.append(data)
 
     audio_data = b''.join(frames)
-
-    # convert stereo to mono
-    p = pyaudio.PyAudio()
-    device_info = p.get_default_input_device_info()
-    if device_info['maxInputChannels'] > 1:
-        audio_stereo = np.frombuffer(audio_data, dtype=np.int16).reshape(-1, 2)
-        audio_data = audio_stereo.mean(axis=1).astype(np.int16)
     
     # check data for silence
     avg_rms = sum(rms) / len(rms)
@@ -187,7 +142,7 @@ async def main() -> None:
         list_audio_devices()
         return
 
-    selected_device = args.device if args.device is not None else get_usb_audio_device()
+    selected_device = args.device if args.device is not None else 0
     if selected_device is None:
         logger.error("No USB audio device found. Exiting.")
         return
@@ -197,7 +152,7 @@ async def main() -> None:
     p = pyaudio.PyAudio()
     stream = p.open(
         format=FORMAT,
-        channels=get_device_channels(selected_device),
+        channels=CHANNELS,
         rate=RATE,
         input=True,
         input_device_index=selected_device,
