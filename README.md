@@ -10,7 +10,7 @@ It also uses Shazamio's (older) `recognize_song` function with 15 second recordi
 
 ### Ideal gear needed
 
-- Raspberry Pi Zero or whatever you have ([I like this kit](https://amzn.to/42etSzc))
+- Raspberry Pi Zero or whatever you have ([I like this kit](https://amzn.to/42FGDlo))
 - USB audio dongle with mic input ([this one is tested](https://a.co/d/51iTuLf))
 - RCA to 3.5mm adapter cable ([like this one](https://a.co/d/3N1qybu))
 - Depending on your setup an [RCA splitter](https://a.co/d/3O8gUSX) might be helpful
@@ -19,8 +19,7 @@ It also uses Shazamio's (older) `recognize_song` function with 15 second recordi
 
 ```
 sudo apt-get update
-sudo apt-get install python3 python3-pip portaudio19-dev ffmpeg libasound2-dev git libopenblas-dev
-
+sudo apt-get install python3 python3-pip portaudio19-dev ffmpeg libasound2-dev libopenblas-dev
 ```
 
 ### Install instructions
@@ -63,7 +62,6 @@ User=vinylpi
 
 [Install]
 WantedBy=multi-user.target
-
 ```
 
 Then enable the service to run on boot and start it.

@@ -93,15 +93,16 @@ async def recognize_song(audio_data):
     return None, None
 
 async def check_song(audio_stream):
-    audio_stream.stop_stream(), audio_stream.start_stream()
-
     frames = []
     rms = []
+
+    audio_stream.start_stream()
     for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
         data = audio_stream.read(CHUNK, exception_on_overflow=False)
         rms_val = audioop.rms(data, 2)
         rms.append(rms_val)
         frames.append(data)
+    audio_stream.stop_stream()
 
     audio_data = b''.join(frames)
     
