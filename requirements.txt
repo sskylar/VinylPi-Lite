@@ -1,5 +1,5 @@
 pyaudio
-shazamio<0.7
+shazamio
 pylast
 asyncio
 wave
