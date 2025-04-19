@@ -19,7 +19,7 @@ It also uses Shazamio's (older) `recognize_song` function with 15 second recordi
 
 ```
 sudo apt-get update
-sudo apt-get install python3 python3-pip portaudio19-dev ffmpeg libasound2-dev libopenblas-dev
+sudo apt-get install python3 python3-pip portaudio19-dev ffmpeg libasound2-dev libopenblas-dev vim -y
 ```
 
 ### Install instructions
@@ -31,14 +31,14 @@ Save your keys to "lastfm_user_info.json" (see example file) with your username 
 ```
 pip install -r requirements.txt --break-system-packages
 
-python VinylPi.py
+python vinylpi.py -v
 ```
 
 ### Post install
 
 To run as a service first create a service file
 ```
-sudo nano /etc/systemd/system/vinylpi.service
+sudo vim /etc/systemd/system/vinylpi.service
 ```
 
 Then paste this as an example, Replace the user and script location with your script location
