@@ -1,6 +1,6 @@
 # VinylPi-Lite
 
-VinylPi automatically scrobbles whatever you are listening to Last.fm using Shazam song recognition. It was designed for vinyl records, but also works for iPod, YouTube, or any audio it can hear.
+VinylPi automatically scrobbles whatever you are listening to Last.fm using Shazam song recognition. It was designed for vinyl records, but also works for radio, iPod docks, YouTube, or any audio it can hear.
 
 This is an extremely stripped down version of <https://github.com/powerpcme/VinylPi> aimed to work on a Raspberry Pi Zero (or ancient hardware like my 2011 Mac Mini).
 
