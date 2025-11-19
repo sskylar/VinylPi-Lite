@@ -13,7 +13,7 @@ It also uses Shazamio's (older) `recognize_song` function with 15 second recordi
 ### Ideal gear needed
 
 - Raspberry Pi Zero or whatever you have ([I like this kit](https://amzn.to/42FGDlo))
-- USB audio dongle with mic input ([this one is tested](https://a.co/d/51iTuLf))
+- Line-in audio adapter ([I like this one](https://a.co/d/51iTuLf))
 - A splitter like this [RCA-to-3.5mm piggyback](https://amzn.to/442hPpP) might be helpful
 
 ### Dependencies
@@ -50,7 +50,7 @@ Description=VinylPi
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /home/vinylpi/vinylpi.py -v
+ExecStart=/usr/bin/python3 /home/vinylpi/vinylpi.py -v -d 1
 WorkingDirectory=/home/vinylpi/
 StandardOutput=inherit
 StandardError=inherit
