@@ -14,7 +14,7 @@ from shazamio import Shazam
 CHUNK = 4096
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
-RATE = 44100
+RATE = 48000
 
 MINIMUM_RMS = 1000
 
