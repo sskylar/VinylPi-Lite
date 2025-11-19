@@ -13,7 +13,7 @@ It also uses Shazamio's (older) `recognize_song` function with 15 second recordi
 ### Ideal gear needed
 
 - Raspberry Pi Zero or whatever you have ([I like this kit](https://amzn.to/42FGDlo))
-- Line-in audio adapter ([I like this one]([https://a.co/d/iE0KyUM)) *will need USB-C adapter for Pi
+- Line-in audio adapter ([I like this one](https://a.co/d/iE0KyUM)) + USB-C adapter for Pi
 - A splitter like this [RCA-to-3.5mm piggyback](https://amzn.to/442hPpP) might be helpful
 
 ### Dependencies
