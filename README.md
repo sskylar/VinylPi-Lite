@@ -13,7 +13,7 @@ It also uses Shazamio's (older) `recognize_song` function with 15 second recordi
 ### Ideal gear needed
 
 - Raspberry Pi Zero or whatever you have ([I like this kit](https://amzn.to/42FGDlo))
-- Line-in audio adapter ([I like this one](https://a.co/d/iE0KyUM) + [USB-C adapter for Pi](https://a.co/d/fivLHKD))
+- Stereo line-in audio adapter ([I like this one](https://a.co/d/iE0KyUM) + [USB-C adapter for Pi](https://a.co/d/fivLHKD))
 - A splitter like this [RCA-to-3.5mm piggyback](https://amzn.to/442hPpP) might be helpful
 
 ### Dependencies
@@ -77,6 +77,22 @@ To view the log while running as a service:
 
 ```
 journalctl --follow -u vinylpi.service
+```
+
+### Optional failsafe
+
+The service generally runs without hiccups on the Raspberry Pi Zero, but every once in a while, I noticed it could freeze up for various reasons (network, stream, etc). 
+
+There are probably better ways to deal with this, but my lazy way is using the following cron job to have the Raspberry Pi check for activity every minute (`* * * * *`) and reboot if it appears to be frozen (no activity in the last minute).
+
+To open crontab:
+```
+sudo crontab -e
+```
+
+Paste in the following job:
+```
+* * * * * journalctl --since="1 minute ago" -u vinylpi.service --quiet | grep -q . || /bin/systemctl reboot --force
 ```
 
 ### Command examples
