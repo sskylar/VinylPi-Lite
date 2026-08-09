@@ -37,6 +37,20 @@ python vinylpi.py -v
 
 ### Post install
 
+For the optional Waveshare 2.13-inch e-paper display, install the official Waveshare Python driver from their repo and ensure the module is available on the Pi:
+
+```
+git clone https://github.com/waveshareteam/e-Paper.git
+cd e-Paper/RaspberryPi_JetsonNano/python
+sudo python3 setup.py install
+```
+
+Then run:
+
+```
+python vinylpi.py --display
+```
+
 To run as a service first create a service file:
 ```
 sudo vim /etc/systemd/system/vinylpi.service

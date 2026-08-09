@@ -11,6 +11,8 @@ import time
 import wave
 from shazamio import Shazam
 
+from display import WaveshareDisplay
+
 CHUNK = 4096
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
@@ -39,6 +41,7 @@ Examples:
     parser.add_argument("-d", "--device", type=int, default=None, help="Select audio device index")
     parser.add_argument("-l", "--list-devices", action="store_true", help="List available audio devices and exit")
     parser.add_argument("-m", "--meter", action="store_true", help="Show sound meter for selected device")
+    parser.add_argument("--display", action="store_true", help="Enable the optional Waveshare e-paper display")
     return parser
 
 args = create_parser().parse_args()
@@ -155,6 +158,7 @@ async def main() -> None:
         return display_sound_meter(stream)
     
     lastfm_network = pylast.LastFMNetwork(**load_user_info())
+    display = WaveshareDisplay(args.display)
 
     recent_matches = []
 
@@ -180,8 +184,10 @@ async def main() -> None:
                     logger.info(f"Song detected: {title} by {artist}")
                     recent_matches.append(song)
                     update_now_playing_on_lastfm(lastfm_network, artist, title)
+                    display.show_song(artist, title, lastfm_network)
                 else:
                     logger.info("No valid song detected")
+                    display.clear()
                 
                 await asyncio.sleep(CHECK_DELAY)
 
@@ -191,6 +197,7 @@ async def main() -> None:
                 logger.error(f"An error occurred: {e}", exc_info=True)
 
     finally:
+        display.close()
         stream.stop_stream(), stream.close(), p.terminate()
 
 if __name__ == "__main__":

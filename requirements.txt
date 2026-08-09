@@ -4,4 +4,5 @@ pylast
 asyncio
 wave
 argparse
+Pillow
 audioop-lts; python_version>='3.13'
