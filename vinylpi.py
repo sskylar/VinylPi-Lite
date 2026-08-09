@@ -73,7 +73,6 @@ def log_song_to_lastfm(network, artist, title):
     except Exception as e:
         logger.error(f"Error logging to Last.fm: {e}")
 
-
 def update_now_playing_on_lastfm(network, artist, title):
     try:
         network.update_now_playing(artist=artist, title=title)
@@ -81,17 +80,6 @@ def update_now_playing_on_lastfm(network, artist, title):
         return (artist, title)
     except Exception as e:
         logger.error(f"Error updating now playing on Last.fm: {e}")
-
-
-def clear_now_playing_on_lastfm(network):
-    try:
-        network.update_now_playing(artist="", title="")
-        logger.info("Cleared now playing on Last.fm")
-        return True
-    except Exception as e:
-        logger.error(f"Error clearing now playing on Last.fm: {e}")
-        return False
-
 
 async def recognize_song(audio_data):
     shazam = Shazam()
@@ -194,7 +182,6 @@ async def main() -> None:
                     update_now_playing_on_lastfm(lastfm_network, artist, title)
                 else:
                     logger.info("No valid song detected")
-                    clear_now_playing_on_lastfm(lastfm_network)
                 
                 await asyncio.sleep(CHECK_DELAY)
 
