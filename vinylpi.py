@@ -16,10 +16,10 @@ FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 48000
 
-MINIMUM_RMS = 1000
+MINIMUM_RMS = 500
 
-RECORD_SECONDS = 15
-CHECK_INTERVAL = 1
+RECORD_SECONDS = 10
+CHECK_DELAY = 0
 USER_INFO_FILE = "lastfm_user_info.json"
 
 def create_parser() -> argparse.ArgumentParser:
@@ -72,6 +72,26 @@ def log_song_to_lastfm(network, artist, title):
         return (artist, title)
     except Exception as e:
         logger.error(f"Error logging to Last.fm: {e}")
+
+
+def update_now_playing_on_lastfm(network, artist, title):
+    try:
+        network.update_now_playing(artist=artist, title=title)
+        logger.info(f"Updated now playing on Last.fm: {title} by {artist}")
+        return (artist, title)
+    except Exception as e:
+        logger.error(f"Error updating now playing on Last.fm: {e}")
+
+
+def clear_now_playing_on_lastfm(network):
+    try:
+        network.update_now_playing(artist="", title="")
+        logger.info("Cleared now playing on Last.fm")
+        return True
+    except Exception as e:
+        logger.error(f"Error clearing now playing on Last.fm: {e}")
+        return False
+
 
 async def recognize_song(audio_data):
     shazam = Shazam()
@@ -148,8 +168,7 @@ async def main() -> None:
     
     lastfm_network = pylast.LastFMNetwork(**load_user_info())
 
-    recent_songs = []
-    last_logged_song = None
+    recent_matches = []
 
     try:
         while True:
@@ -157,22 +176,27 @@ async def main() -> None:
                 logger.info("Starting song detection...")
 
                 song = artist, title = await check_song(stream)
+                song_detected = artist is not None and title is not None
+                song_changed = recent_matches and (recent_matches[-1] != song)  
 
-                if artist and title:
-                    recent_songs = recent_songs[-2:] + [song]
-                    if recent_songs.count(song) >= 2:
-                        logger.info(f"Second match: {title} by {artist}")
-                        if song == last_logged_song:
-                            logger.info(f"Duplicate song detected. Not logging: {title} by {artist}")
-                        else:
-                            last_logged_song = log_song_to_lastfm(lastfm_network, artist, title)
-                        recent_songs = []
-                    else:
-                        logger.info(f"First match: {title} by {artist}")
+                # Check if song changed or music stopped, log previous song if matched twice
+                if recent_matches and (not song_detected or song_changed):
+                    # Log previous song if matched twice
+                    previous_song = recent_matches[-1]
+                    if recent_matches.count(previous_song) >= 2:
+                        logger.info(f"Logging previous song to Last.fm: {previous_song[1]} by {previous_song[0]}")
+                        recent_matches.clear()
+                        log_song_to_lastfm(lastfm_network, previous_song[0], previous_song[1])
+
+                if song_detected:
+                    logger.info(f"Song detected: {title} by {artist}")
+                    recent_matches.append(song)
+                    update_now_playing_on_lastfm(lastfm_network, artist, title)
                 else:
                     logger.info("No valid song detected")
+                    clear_now_playing_on_lastfm(lastfm_network)
                 
-                await asyncio.sleep(CHECK_INTERVAL)
+                await asyncio.sleep(CHECK_DELAY)
 
             except asyncio.CancelledError:
                 break
