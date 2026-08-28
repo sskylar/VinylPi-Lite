@@ -11,8 +11,6 @@ import time
 import wave
 from shazamio import Shazam
 
-from display import WaveshareDisplay
-
 CHUNK = 4096
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
@@ -23,6 +21,18 @@ MINIMUM_RMS = 500
 RECORD_SECONDS = 15
 CHECK_DELAY = 0
 USER_INFO_FILE = "lastfm_user_info.json"
+
+
+class DisabledDisplay:
+    def show_song(self, artist, title, network=None):
+        pass
+
+    def clear(self):
+        pass
+
+    def close(self):
+        pass
+
 
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -158,7 +168,12 @@ async def main() -> None:
         return display_sound_meter(stream)
     
     lastfm_network = pylast.LastFMNetwork(**load_user_info())
-    display = WaveshareDisplay(args.display)
+    if args.display:
+        from display import WaveshareDisplay
+
+        display = WaveshareDisplay(enabled=True)
+    else:
+        display = DisabledDisplay()
 
     recent_matches = []
     last_logged_song = None

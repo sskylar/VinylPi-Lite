@@ -37,13 +37,15 @@ python vinylpi.py -v
 
 ### Post install
 
-For the optional Waveshare 2.13-inch e-paper display, install the official Waveshare Python driver from their repo and ensure the module is available on the Pi:
+For the optional 2.13-inch Touch e-Paper HAT V3 or V4, install its driver package:
 
 ```
-git clone https://github.com/waveshareteam/e-Paper.git
-cd e-Paper/RaspberryPi_JetsonNano/python
+git clone https://github.com/waveshareteam/Touch_e-Paper_HAT.git
+cd Touch_e-Paper_HAT/python
 sudo python3 setup.py install
 ```
+
+This installs the `TP_lib` module used by the Touch HAT.
 
 Then run:
 

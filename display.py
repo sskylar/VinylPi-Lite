@@ -22,13 +22,7 @@ class WaveshareDisplay:
         if not self.enabled:
             return
 
-        module_names = [
-            "waveshare_epd.epd2in13",
-            "waveshare_epd.epd2in13_V2",
-            "waveshare_epd.epd2in13_V3",
-            "waveshare_epd.epd2in13b",
-            "waveshare_epd.epd2in13b_V3",
-        ]
+        module_names = ["TP_lib.epd2in13_V4", "TP_lib.epd2in13_V3"]
 
         last_error = None
         for module_name in module_names:
@@ -36,14 +30,8 @@ class WaveshareDisplay:
                 module = importlib.import_module(module_name)
                 epd_cls = getattr(module, "EPD")
                 epd = epd_cls()
-                init_method = getattr(epd, "init", None)
-                if callable(init_method):
-                    if hasattr(epd, "lut_full_update"):
-                        init_method(epd.lut_full_update)
-                    else:
-                        init_method()
-                if hasattr(epd, "Clear"):
-                    epd.Clear(0xFF)
+                epd.init(epd.FULL_UPDATE)
+                epd.Clear(0xFF)
                 self.epd = epd
                 self.ready = True
                 break
@@ -52,7 +40,7 @@ class WaveshareDisplay:
                 continue
 
         if not self.ready:
-            logger.warning("Waveshare display requested but no supported driver was found: %s", last_error)
+            logger.warning("Touch e-Paper HAT requested but no supported driver was found: %s", last_error)
             self.enabled = False
 
     def _fit_text(self, text, max_chars):
@@ -84,7 +72,7 @@ class WaveshareDisplay:
             return
 
         if Image is None or ImageDraw is None or ImageFont is None:
-            logger.warning("Pillow is required to render to the Waveshare display")
+            logger.warning("Pillow is required to render to the Touch e-Paper HAT")
             return
 
         try:
@@ -124,7 +112,7 @@ class WaveshareDisplay:
             return
 
         try:
-            self.epd.init(self.epd.lut_full_update)
+            self.epd.init(self.epd.FULL_UPDATE)
             self.epd.Clear(0xFF)
         except Exception as exc:
             logger.warning("Unable to clear Waveshare display: %s", exc)
@@ -133,5 +121,9 @@ class WaveshareDisplay:
         if self.epd is not None:
             try:
                 self.epd.sleep()
+            except Exception:
+                pass
+            try:
+                self.epd.Dev_exit()
             except Exception:
                 pass
