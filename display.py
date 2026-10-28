@@ -48,10 +48,6 @@ class WaveshareDisplay:
             return ""
         return (text[: max_chars - 1] + "…") if len(text) > max_chars else text
 
-    def _draw_box(self, draw, x, y, w, h, title):
-        draw.rectangle([x, y, x + w, y + h], outline=0)
-        draw.text((x + 6, y + 4), title, fill=0)
-
     def _load_album_art(self, network, artist, title):
         if network is None:
             return None
@@ -84,24 +80,37 @@ class WaveshareDisplay:
             except Exception:
                 font = ImageFont.load_default()
 
-            draw.rectangle([0, 0, width - 1, height - 1], outline=0)
-            draw.line([0, 24, width - 1, 24], fill=0)
-            draw.line([0, height - 24, width - 1, height - 24], fill=0)
+            cover_size = height - 16
+            cover_x, cover_y = 8, 8
+            text_x = cover_x + cover_size + 12
 
-            self._draw_box(draw, 8, 32, 70, 70, "Album")
-            self._draw_box(draw, 92, 32, 150, 70, "Art")
+            draw.rectangle([0, 0, width - 1, height - 1], outline=0)
+            draw.rectangle(
+                [cover_x, cover_y, cover_x + cover_size - 1, cover_y + cover_size - 1],
+                outline=0,
+            )
+            draw.line([text_x, height // 2, width - 8, height // 2], fill=0)
 
             art = self._load_album_art(network, artist, title)
             if art is not None:
                 try:
-                    art = art.resize((132, 62))
-                    image.paste(art, (100, 40))
+                    art = art.resize((cover_size - 2, cover_size - 2))
+                    image.paste(art, (cover_x + 1, cover_y + 1))
                 except Exception:
                     pass
 
-            draw.text((8, 8), "Now Playing", fill=0, font=font)
-            draw.text((90, 8), self._fit_text(artist or "Unknown Artist", 18), fill=0, font=font)
-            draw.text((92, 54), self._fit_text(title or "Unknown Track", 20), fill=0, font=font)
+            draw.text(
+                (text_x, 24),
+                self._fit_text(artist or "Unknown Artist", 15),
+                fill=0,
+                font=font,
+            )
+            draw.text(
+                (text_x, 78),
+                self._fit_text(title or "Unknown Track", 15),
+                fill=0,
+                font=font,
+            )
 
             self.epd.display(self.epd.getbuffer(image))
         except Exception as exc:
