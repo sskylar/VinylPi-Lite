@@ -174,7 +174,7 @@ async def main() -> None:
                     previous_song = recent_matches[-1]
                     if recent_matches.count(previous_song) >= 2:
                         logger.info(f"Logging previous song to Last.fm: {previous_song[1]} by {previous_song[0]}")
-                        if song == last_logged_song:
+                        if previous_song == last_logged_song:
                             logger.info(f"Duplicate song detected. Not logging: {title} by {artist}")
                         else:
                             last_logged_song = log_song_to_lastfm(lastfm_network, previous_song[0], previous_song[1])
